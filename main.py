@@ -1,14 +1,9 @@
 import pygame
 import numpy as np
 from scipy.ndimage import gaussian_filter, map_coordinates
-
-# Grid size
-N = 100
-size = (N, N)
+from config import N, size, scale, screen_size, dt, visc
 
 # Pygame setup
-scale = 5
-screen_size = (N * scale, N * scale)
 pygame.init()
 screen = pygame.display.set_mode(screen_size)
 clock = pygame.time.Clock()
@@ -20,10 +15,6 @@ v = np.zeros(size)
 
 # Obstacle mask (1 = obstacle, 0 = free)
 obstacles = np.zeros(size, dtype=np.uint8)
-
-# Simulation parameters
-dt = 0.1
-visc = 0.0001
 
 # Draw density field to screen
 def draw_density():
