@@ -58,6 +58,7 @@ def apply_obstacles(u, v):
 
 running = True
 mouse_down = False
+mouse_button = 1  # 1 for left, 3 for right
 
 while running:
     clock.tick(60)
@@ -66,6 +67,7 @@ while running:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_down = True
+            mouse_button = event.button  # 1=left, 3=right
         elif event.type == pygame.MOUSEBUTTONUP:
             mouse_down = False
 
@@ -77,6 +79,12 @@ while running:
         grid_x = np.clip(grid_x, 2, N-3)
         grid_y = np.clip(grid_y, 2, N-3)
         obstacles[grid_y-2:grid_y+3, grid_x-2:grid_x+3] = 1
+
+        # Add positive or negative current
+        if mouse_button == 1:  # Left click: positive
+            u[grid_y-2:grid_y+3, grid_x-2:grid_x+3] = inflow_speed
+        elif mouse_button == 3:  # Right click: negative
+            u[grid_y-2:grid_y+3, grid_x-2:grid_x+3] = -inflow_speed
 
     apply_inflow()
 
