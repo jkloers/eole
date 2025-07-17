@@ -1,7 +1,8 @@
 import pygame
 import numpy as np
 from scipy.ndimage import gaussian_filter, map_coordinates
-from config import N, size, scale, screen_size, dt, visc
+from config import N, size, scale, screen_size, dt, visc, inflow_speed
+from draw import draw_density
 
 # Pygame setup
 pygame.init()
@@ -16,20 +17,14 @@ v = np.zeros(size)
 # Obstacle mask (1 = obstacle, 0 = free)
 obstacles = np.zeros(size, dtype=np.uint8)
 
-# Draw density field to screen
-def draw_density():
-    image = (density * 255).clip(0, 255).astype(np.uint8)
-    image = np.stack([image]*3, axis=-1)  # RGB
-    # Draw obstacles in red
-    image[obstacles == 1] = [255, 0, 0]
-    image = np.kron(image, np.ones((scale, scale, 1))).astype(np.uint8)
-    pygame.surfarray.blit_array(screen, image)
+# Tracer particle (start near the left edge, center vertically)
+tracer_pos = [size[0] // 2, 2.0]  # [row (y), col (x)] in grid coordinates (float)
 
 # Apply simple inflow on left side
 def apply_inflow():
     # Make inflow wider and stronger
     density[:, 1:4] = 1.0
-    u[:, 1:4] = 2.0
+    u[:, 1:4] = inflow_speed
 
 # Semi-Lagrangian advection using scipy's map_coordinates
 def advect(field, u, v):
@@ -76,17 +71,27 @@ while running:
 
     if mouse_down:
         mx, my = pygame.mouse.get_pos()
-        i, j = mx // scale, my // scale
+        grid_x = mx // scale  # column index
+        grid_y = my // scale  # row index
         # Clamp indices to valid range
-        i = np.clip(i, 2, N-3)
-        j = np.clip(j, 2, N-3)
-        obstacles[j-2:j+3, i-2:i+3] = 1
+        grid_x = np.clip(grid_x, 2, N-3)
+        grid_y = np.clip(grid_y, 2, N-3)
+        obstacles[grid_y-2:grid_y+3, grid_x-2:grid_x+3] = 1
 
     apply_inflow()
 
     density = advect(density, u, v)
     u = advect(u, u, v)
     v = advect(v, u, v)
+
+    # Update tracer position using bilinear interpolation of u, v
+    y, x = tracer_pos
+    if 1 <= y < size[0]-2 and 1 <= x < size[1]-2:
+        # Bilinear interpolation for smooth movement
+        uy = np.interp([y], np.arange(size[0]), v[:, int(x)])[0]
+        ux = np.interp([x], np.arange(size[1]), u[int(y), :])[0]
+        tracer_pos[0] += uy * dt
+        tracer_pos[1] += ux * dt
 
     # Clamp density to [0, 1]
     density = np.clip(density, 0, 1)
@@ -97,7 +102,7 @@ while running:
     u, v = project(u, v)
     apply_obstacles(u, v)
 
-    draw_density()
+    draw_density(screen, density, obstacles, scale, tracer_pos)
     pygame.display.flip()
 
 pygame.quit()

@@ -9,3 +9,4 @@ screen_size = (N * scale, N * scale)
 # Simulation parameters
 dt = 0.1
 visc = 0.0001
+inflow_speed = 2.0
